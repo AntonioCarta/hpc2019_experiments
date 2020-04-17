@@ -71,7 +71,7 @@ def bench(model):
     # print(f"intra-op threads: {torch.get_num_threads()}")
 
     set_allow_cuda(False)
-    T, B, F = 100, 64, 3000
+    T, B, F = 100, 64, 300
     H = 200
     n_trials = 10
     fake_input = cuda_move(torch.zeros(T, B, F))
