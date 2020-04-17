@@ -1,3 +1,5 @@
 .idea
 deep_lmn
 libs
+report/out
+*.out
