@@ -70,17 +70,23 @@ def bench(model):
     # print(torch.__config__.parallel_info())
     # print(f"intra-op threads: {torch.get_num_threads()}")
 
-    set_allow_cuda(False)
+    set_allow_cuda(True)
     T, B, F = 100, 64, 300
     H = 200
     n_trials = 10
-    fake_input = cuda_move(torch.zeros(T, B, F))
+    fake_input = cuda_move(torch.randn(T, B, F))
+
+    def foo_step(m, x):
+        y = m(x)[0]
+        e = y.sum()
+        e.backward()
 
     # print(str(model), end='')
-    rnn = model(F, H)
+    rnn = cuda_move(model(F, H))
     y = rnn(fake_input)
-    foo = lambda: rnn(fake_input)
+    foo = lambda: foo_step(rnn, fake_input)
     print(timeit_best(foo, n_trials))
+    print(fake_input.device)
 
 
 if __name__ == '__main__':
