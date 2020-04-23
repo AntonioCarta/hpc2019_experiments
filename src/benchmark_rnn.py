@@ -81,6 +81,11 @@ def bench(model):
         e = y.sum()
         e.backward()
 
+    def foo_step(m, x):
+        y = m(x)[0]
+        e = y.sum()
+        e.backward()
+
     # print(str(model), end='')
     rnn = cuda_move(model(F, H))
     y = rnn(fake_input)

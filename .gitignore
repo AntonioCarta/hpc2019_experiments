@@ -1,6 +1,7 @@
 .idea
-deep_lmn
 cannon
+deep_lmn
 libs
 report/out
 results/*.txt
+*.out
