@@ -36,7 +36,7 @@ Notice that despite having all the environment saved in the \verb!requirements.t
 
 The next step is the creation of the Charliecloud container from the Dockerfile. In my case, the container is called \verb!antonio/lmn!
 ```
-    ch-build antonio/lmn .
+    ch-build -t antonio/lmn --network=host .
     ch-builder2tar antonio/lmn .
     ch-tar2dir ./antonio.lmn.tar.gz .        
 ```
