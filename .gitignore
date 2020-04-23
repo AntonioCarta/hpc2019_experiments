@@ -3,3 +3,4 @@ deep_lmn
 cannon
 libs
 report/out
+results/*.txt
