@@ -1,10 +1,9 @@
 """
     benchmark script for RNN models using MKL-DNN.
 """
-from cannon.utils import set_allow_cuda, set_gpu, timeit, timeit_best
+from src.utils import set_allow_cuda, cuda_move, timeit_best
 import torch
 from torch import nn
-from cannon.utils import cuda_move
 from torch import jit
 from torch import Tensor
 import argparse
@@ -70,16 +69,10 @@ def bench(model):
     # print(torch.__config__.parallel_info())
     # print(f"intra-op threads: {torch.get_num_threads()}")
 
-    set_allow_cuda(True)
     T, B, F = 100, 64, 300
     H = 200
     n_trials = 10
     fake_input = cuda_move(torch.randn(T, B, F))
-
-    def foo_step(m, x):
-        y = m(x)[0]
-        e = y.sum()
-        e.backward()
 
     def foo_step(m, x):
         y = m(x)[0]
@@ -95,6 +88,7 @@ def bench(model):
 
 
 if __name__ == '__main__':
+    set_allow_cuda(False)
     parser = argparse.ArgumentParser()
     parser.add_argument('--threads', metavar='N', type=int, help='number of intra-op thread')
     args = parser.parse_args()
@@ -102,4 +96,4 @@ if __name__ == '__main__':
         torch.set_num_threads(args.threads)
 
     # models = [JitRNN, SlowRNN]
-    bench(JitRNN)
+    bench(SlowRNN)

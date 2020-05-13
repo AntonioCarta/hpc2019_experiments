@@ -1,14 +1,11 @@
 """
     benchmark script for RNN models using MKL-DNN.
 """
-from cannon.utils import set_allow_cuda, timeit_best
+from src.utils import timeit_best
 import torch
 import torch.nn as nn
 import argparse
-from torch import jit
-from typing import List
-from torch import Tensor
-# from src.custom_lstm import script_lstm
+
 
 def bench():
     # print(torch.__config__.parallel_info())
@@ -41,5 +38,4 @@ if __name__ == '__main__':
     if args.threads is not None:
         torch.set_num_threads(args.threads)
 
-    # models = [JitRNN, SlowRNN]
     bench()
