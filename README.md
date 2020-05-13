@@ -49,7 +49,7 @@ For some unknown reasons, Charliecloud ignores the ENV directives defined in you
 Now we can easily run our python script with the command
 ```
     ch-run --set-env=config.env 
-        --cd=/home/carta/docker_repo antonio.lmn 
+        --cd=/home/carta/hpc2019_experiments antonio.lmn 
         /opt/conda/bin/python /home/carta/repo/main.py
 ```
 

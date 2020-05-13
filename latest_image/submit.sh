@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=/home/carta/docker_repo/docker_latest/test
+#SBATCH --job-name=/home/carta/docker_repo/latest_image/test
 #SBATCH --output=test.txt
 #SBATCH --nodes=1
 #
