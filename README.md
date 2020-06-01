@@ -34,11 +34,16 @@ Using the requirements, we can create a Dockerfile, which will be used to create
 
 Notice that despite having all the environment saved in the \verb!requirements.txt! file, I had some problems during the installation and therefore I had to install pytorch separately after the other libraries.
 
-The next step is the creation of the Charliecloud container from the Dockerfile. In my case, the container is called \verb!antonio/lmn!
+The next step is the creation of the Charliecloud container from the Dockerfile. In my case, the container is called `antonio/base`
 ```
     ch-build -t antonio/lmn --network=host .
     ch-builder2tar antonio/lmn .
     ch-tar2dir ./antonio.lmn.tar.gz .        
+```
+
+A script to build the charliecloud image is available in `create_image.sh` that you can run with the command:
+```
+create_image IMAGE_NAME IMAGE_FOLDER
 ```
 
 For some unknown reasons, Charliecloud ignores the ENV directives defined in your Dockerfile. If you want to define additional environment variables for your container you can create an environment file that defines your custom variables. This file must be passed as an argument when running the container, as we will see below. In my case, I added to the `PYTHONPATH` the folder where my python library resides in a separate `config.env` file:
