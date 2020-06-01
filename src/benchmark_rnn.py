@@ -88,7 +88,7 @@ def bench(model):
 
 
 if __name__ == '__main__':
-    set_allow_cuda(False)
+    set_allow_cuda(True)
     parser = argparse.ArgumentParser()
     parser.add_argument('--threads', metavar='N', type=int, help='number of intra-op thread')
     args = parser.parse_args()
