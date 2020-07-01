@@ -8,7 +8,8 @@ import sys
 
 
 class RayModelSelection(Experiment):
-    def __init__(self, log_dir, param_list, train_foo, num_cpus, resume_ok=True, logs_subfolder_key='model_type'):
+    def __init__(self, log_dir, param_list, train_foo, num_cpus,
+                 resume_ok=True, logs_subfolder_key='model_type'):
         self.results = []
         super().__init__(log_dir, resume_ok=resume_ok)
         self.logs_subfolder_key = logs_subfolder_key
@@ -17,6 +18,15 @@ class RayModelSelection(Experiment):
         self.results = []
         self.id = id
         self.num_cpus = num_cpus
+
+        if os.environ.get('ip_head') is not None:
+            assert os.environ.get('redis_password') is not None
+            ray.init(address=os.environ.get('ip_head'), redis_password=os.environ.get('redis_password'))
+            self.experiment_log.info("Connected to Ray cluster.")
+            self.experiment_log.info(f"Available nodes: {ray.nodes()}")
+        else:
+            ray.init()
+            self.experiment_log.info(f"Started local ray instance.")
 
     def save_checkpoint(self, config):
         d = {'results': self.results, 'param_list': self.param_list}
@@ -74,11 +84,6 @@ class RayModelSelection(Experiment):
 
 if __name__ == '__main__':
     redis_password = sys.argv[1]
-    ray.init(address=os.environ["ip_head"], redis_password=redis_password)
-
-    print("Nodes in the Ray cluster:")
-    print(ray.nodes())
-
 
     def train_foo(log_dir, params):
         print(f"Running config {params['id']}")

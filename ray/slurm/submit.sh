@@ -21,6 +21,7 @@ ip_head=$ip_prefix$suffix
 redis_password=$(uuidgen)
 
 export ip_head # Exporting for latter access by trainer.py
+export redis_password
 
 srun --nodes=1 --ntasks=1 -w $node1 ray start --block --head --redis-port=6379 --redis-password=$redis_password & # Starting the head
 sleep 5
