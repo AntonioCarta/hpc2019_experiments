@@ -15,7 +15,7 @@ def f():
 # The following takes one second (assuming that ray was able to access all of the allocated nodes).
 for i in range(10):
     start = time.time()
-    ip_addresses = ray.get([f.remote() for _ in range(5)])
+    ip_addresses = ray.get([f.remote() for _ in range(8)])
     print(Counter(ip_addresses))
     end = time.time()
     print(end - start)
