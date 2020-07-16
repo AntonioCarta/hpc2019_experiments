@@ -98,8 +98,80 @@ To submit the jobs to the scheduler, you must run the command
 
 You can check the status of your job with `squeue`, where you should see a list of your jobs in execution.
 
+
+# Distributed Execution with Ray
+Ray is a python library that provides simple primitives for running distributed applications. Many libraries are built on top of Ray for traditional workloads such as model selection (Ray Tune) or reinforcement learning (RLLib). Ray can be used on the cluster with charliecloud, as shown in the examples available in `ray/container`:
+- `Dockerfile` installs ray on a container.
+- `submit.sh` creates the charliecloud image from the `Dockerfile`
+- `submit_multinode.sh` is the submission script for multinode experiments.
+- `demo_multinode.py` is the Python script executed with `submit_multinode.sh` that shows basic Ray functionality.
+
+## Submission Script
+The submission script in the examples directory performs the following steps:
+- start ray head node
+- start each worker separately
+- start the main script
+
+You have to make only a couple of minimal changes to adapt the script to your job:
+- change `job-name` to give it a significative name.
+- set `#SBATCH --nodes` slurm argument to the number of desired nodes + 1 for the head node.
+- set `worker_num` to the number of worker nodes (which must be `#SBATCH --nodes` - 1).
+- set `WORKDIR` and `PY_MAIN` to the working directory and main script, respectively.
+
+```
+#!/bin/bash
+
+#SBATCH --job-name=test
+#SBATCH --cpus-per-task=5
+#SBATCH --nodes=3
+#SBATCH --tasks-per-node 1
+
+worker_num=2 # Must be one less that the total number of nodes
+WORKDIR=/home/carta/hpc2019_experiments/ray/container
+PY_MAIN=/home/carta/hpc2019_experiments/ray/container/demo_multinode.py
+
+...
+```
+
+You can run the submission script with the command `sbatch submit_multinode.sh`.
+
+## Main Script
+
+Inside the main script, Ray must be initialized with the IP address of the head node and the redis password, which are saved into appropriate environment variables by the submission script:
+```
+    ray.init(address=os.environ["ip_head"], redis_password=os.environ["redis_password"])
+```
+
+Remote functions are defined by adding a `ray.remote` decorator to the function's definition. `ray.remote` takes as additional values the number of requested resources (`num_cpus`, `num_gpus`). However, Ray does not enforce exclusive access to the resources, i.e. each remote function can use all the cores available to its worker node. The programmer is responsible for the resource management.
+
+```
+@ray.remote(num_cpus=2)
+def f():
+    print(f"Inside a remote function")
+    time.sleep(5)
+    return ray.services.get_node_ip_address()
+```
+
+Remote function can be called asynchronously with the `remote` method, which immediately returns a handle (a Future value):
+```
+remote_id = f.remote() 
+```
+
+The return value can be obtained with the `ray.get` method, which waits until the remote function returns a value.
+```
+ray.get(remote_id)
+```
+
+Resource management in pytorch can be done with the methods `torch.get_num_threads()` and `torch.set_num_threads()`. They must be called before any computation. Since ray does not enforce resource management, these methods are fundamental to ensure that each remote function is using the correct amount of resources.
+
+# Troubleshooting
+If you have any problems you can:
+- Try to run without containers to check if charliecloud is causing the issue.
+- Check the number of used cores with `ssh c03` and then running `htop` inside the worker node, where `c03` is the node you are using (you can find it with `squeue`).
+- Check the number of pytorch threads with `torch.get_num_threads()` and `torch.set_num_threads()`.
+
 # Final Notes
-I hope you will find this helpful to start running your own experiments on the cluster. While this document describes my personal experience, using the steps described here and the official documentation it should be easy enough to adapt this procedure to your own use case.
+I hope you will find this helpful to start running your own experiments on the cluster. While this document describes my personal experience, using the steps described here and the official documentation it should be easy enough to adapt the submission scripts to your own use case.
 
 # Useful Links
 These are some resources that you may find useful:
@@ -107,3 +179,4 @@ These are some resources that you may find useful:
 - **Docker docs** https://docs.docker.com/
 - **Charliecloud docs** https://hpc.github.io/charliecloud/index.html
 - **slurm docs** https://slurm.schedmd.com/documentation.html
+- **Ray docs** https://docs.ray.io/en/latest/
