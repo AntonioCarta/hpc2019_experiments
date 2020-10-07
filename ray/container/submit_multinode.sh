@@ -39,4 +39,4 @@ do
   sleep 5
 done
 
-ch-run --set-env=config.env --cd=$WORKDIR antonio.ray python $PY_MAIN $redis_password 56 # Pass the total number of allocated CPUs
+ch-run --set-env=config.env --cd=$WORKDIR antonio.ray python $PY_MAIN

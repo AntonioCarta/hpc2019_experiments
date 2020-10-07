@@ -5,3 +5,4 @@ libs
 report/out
 results/*.txt
 *.out
+*.pdf

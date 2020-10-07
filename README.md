@@ -1,10 +1,10 @@
 # How to Run Containers on the Intel Cluster
 
-This repository describes my personal experience porting a python project from a single node to the Intel cluster `hpc2019.unipi.it`.
+This repository describes my personal experience porting my deep learning experiments from a single node machine (with GPUs) to the Intel cluster `hpc2019.unipi.it` (CPU only).
 
-The use case presented here is a simple example of parallel computation. The python script that we want to run implements the training of a deep learning model, and we would like to run a model selection in parallel, with several instances of the same script running on different compute nodes of the cluster, each one with different parameters. This approach does not require communication between the jobs or communication between compute nodes since each configuration runs on a single node. If you are interested in multi-node training, you can look up horovod, a deep learning library that allows you to easily scale to multiple nodes.
+The objective is simple. Using a single machine, shared with other users, I can only launch a limited amount of models concurrently. Despite the computational power of the GPU, large hyperparameter selections are expensive, running up to a couple of weeks for my most experiments. Using the cluster, we can run the training of each deep learning model in parallel, with several instances of the same script running on different compute nodes of the cluster, each one on different hyperparameter's configurations. This approach does not require complex communication between the jobs or communication between compute nodes since each configuration runs on a single node. Therefore, it's quite easy to implement. For large models, you may be interested in distributed training. In this case, you can look up horovod, a deep learning library that allows you to easily scale to multiple nodes.
 
-In order to run the python script, the operating system must have a set of scientific libraries installed. Different users may require different version of the libraries, possibly incompatible between them. Since installing and managing all the dependencies on the cluster machines would be unfeasible, we will encapsulate the dependencies inside a Charliecloud container, which is a containerization mechanism designed for HPC systems.
+In order to run our python script, the operating system must have a set of scientific libraries installed. Different users may require different version of the libraries, possibly incompatible between them. Since installing and managing all the dependencies on the cluster machines would be unfeasible, we will encapsulate the dependencies inside a Charliecloud container, a container designed for HPC systems.
     
 ## Outline
 The process of porting the experiment is articulated in 4 steps:
@@ -13,8 +13,9 @@ The process of porting the experiment is articulated in 4 steps:
 - creation of a slurm submission script
 - scheduling of parallel jobs on the cluster with slurm
 
+
 # Creation of a Charliecloud Container
-To create a container to run you python scripts, you must export your python environment. This will allow to easily install all the dependencies inside a container. You can use the command:
+To create a container to run you python scripts, you must export your python environment. This will allow to easily install your dependencies inside the container. You can use the command:
 
 ```
     conda list -e > requirements.txt
@@ -32,13 +33,13 @@ Using the requirements, we can create a Dockerfile, which will be used to create
     WORKDIR /home/carta
 ```
 
-Notice that despite having all the environment saved in the \verb!requirements.txt! file, I had some problems during the installation and therefore I had to install pytorch separately after the other libraries.
+Notice that despite having all the environment saved in the `requirements.txt` file. I had some problems during the installation and therefore I had to install pytorch separately after the other libraries.
 
 The next step is the creation of the Charliecloud container from the Dockerfile. In my case, the container is called `antonio/base`
 ```
-    ch-build -t antonio/lmn --network=host .
-    ch-builder2tar antonio/lmn .
-    ch-tar2dir ./antonio.lmn.tar.gz .        
+    ch-build -t antonio/base --network=host .
+    ch-builder2tar antonio/base .
+    ch-tar2dir ./antonio.base.tar.gz .        
 ```
 
 A script to build the charliecloud image is available in `create_image.sh` that you can run with the command:
@@ -46,12 +47,12 @@ A script to build the charliecloud image is available in `create_image.sh` that 
 create_image IMAGE_NAME IMAGE_FOLDER
 ```
 
-For some unknown reasons, Charliecloud ignores the ENV directives defined in your Dockerfile. If you want to define additional environment variables for your container you can create an environment file that defines your custom variables. This file must be passed as an argument when running the container, as we will see below. In my case, I added to the `PYTHONPATH` the folder where my python library resides in a separate `config.env` file:
+For some (unknown) reasons, Charliecloud ignores the ENV directives defined in your Dockerfile. If you want to define additional environment variables for your container you can create an environment file that defines your custom variables. This file must be passed as an argument when running the container, as we will see below. In my case, I added to the `PYTHONPATH` the folder where my python library resides in a separate `config.env` file:
 ```
     PYTHONPATH=.:/home/carta:/home/carta/cannon
 ```
 
-Now we can easily run our python script with the command
+You probably don't need to do this. Now we can easily run our python script inside the container with the command
 ```
     ch-run --set-env=config.env 
         --cd=/home/carta/hpc2019_experiments antonio.lmn 
@@ -62,10 +63,10 @@ where:
 - `--cd` changes the directory
 - `--set-env` set the environment variables
 
-The container executed with `ch-run` is running on the head node.
+The container executed with `ch-run` is running on the head node. Don't use the head to run long jobs. You should use it only to launch your jobs on the compute nodes.
 
 # Scheduling Jobs on the Cluster
-Since we do not have direct access to the compute nodes, we must use \verb!slurm! to schedule the jobs in parallel. `slurm` will take care of the allocation of the resources in a fair way for all the jobs.
+The schedule multiple jobs across the compute nodes we use `slurm`, that will take care of the allocation of the resources in a fair way for all the concurrent jobs.
 
 To do this, we need to create a submission script `submit.sh`, which will be run by slurm:
 
@@ -98,13 +99,16 @@ To submit the jobs to the scheduler, you must run the command
 
 You can check the status of your job with `squeue`, where you should see a list of your jobs in execution.
 
+What's happening here? `slurm` 8 containers in 8 separate nodes. The container will use the `id` argument to change their configuration appropriately and run completely independent of each other. Notice that each container is taking the entire node exclusively. If you need less resources be sure to adjust your submission script and check with `squeue` that slurm is giving only the necessary amount of resources.
+
 
 # Distributed Execution with Ray
-Ray is a python library that provides simple primitives for running distributed applications. Many libraries are built on top of Ray for traditional workloads such as model selection (Ray Tune) or reinforcement learning (RLLib). Ray can be used on the cluster with charliecloud, as shown in the examples available in `ray/container`:
+The previous approach is extremely simple and allows you to run large hyperparameter searches on the cluster with minimal changes to your code. However, you may need a more complex approach. Ray is a python library that provides simple primitives for running distributed applications. Many libraries are built on top of Ray for traditional ML workloads such as model selection (Ray Tune) or reinforcement learning (RLLib). Ray can be used on the cluster with charliecloud, as shown in the examples available in `ray/container`:
 - `Dockerfile` installs ray on a container.
 - `submit.sh` creates the charliecloud image from the `Dockerfile`
 - `submit_multinode.sh` is the submission script for multinode experiments.
 - `demo_multinode.py` is the Python script executed with `submit_multinode.sh` that shows basic Ray functionality.
+
 
 ## Submission Script
 The submission script in the examples directory performs the following steps:
@@ -171,7 +175,7 @@ If you have any problems you can:
 - Check the number of pytorch threads with `torch.get_num_threads()` and `torch.set_num_threads()`.
 
 # Final Notes
-I hope you will find this helpful to start running your own experiments on the cluster. While this document describes my personal experience, using the steps described here and the official documentation it should be easy enough to adapt the submission scripts to your own use case.
+I hope you will find this helpful to start running your own experiments on the cluster. This document should give you a headstart. Using the steps described here and the official documentation it should be easy enough to adapt the submission scripts to your own use case.
 
 # Useful Links
 These are some resources that you may find useful:
