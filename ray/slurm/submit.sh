@@ -18,12 +18,10 @@ node1=${nodes_array[0]}
 ip_prefix=$(srun --nodes=1 --ntasks=1 -w $node1 hostname --ip-address) # Making address
 suffix=':6379'
 ip_head=$ip_prefix$suffix
-redis_password=$(uuidgen)
 
 export ip_head # Exporting for latter access by trainer.py
-export redis_password
 
-srun --nodes=1 --ntasks=1 -w $node1 ray start --block --head --redis-port=6379 --redis-password=$redis_password & # Starting the head
+srun --nodes=1 --ntasks=1 -w $node1 ray start --block --head --port=6379 & # Starting the head
 sleep 5
 # Make sure the head successfully starts before any worker does, otherwise
 # the worker will not be able to connect to redis. In case of longer delay,
@@ -32,9 +30,9 @@ sleep 5
 for ((  i=1; i<=$worker_num; i++ ))
 do
   node2=${nodes_array[$i]}
-  srun --nodes=1 --ntasks=1 -w $node2 ray start --block --address=$ip_head --redis-password=$redis_password & # Starting the workers
+  srun --nodes=1 --ntasks=1 -w $node2 ray start --block --address=$ip_head & # Starting the workers
   # Flag --block will keep ray process alive on each compute node.
   sleep 5
 done
 
-python -u model_selection.py $redis_password 56 # Pass the total number of allocated CPUs
+python -u model_selection.py 56 # Pass the total number of allocated CPUs

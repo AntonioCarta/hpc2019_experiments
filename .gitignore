@@ -6,3 +6,7 @@ report/out
 results/*.txt
 *.out
 *.pdf
+hpc.pptx
+outline.md
+slides_img
+src/.ipynb_checkpoints

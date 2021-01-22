@@ -1,3 +1,4 @@
+#!/bin/bash
 sleep 5
 uname -n
 echo $SLURM_PROCID "Hello world!!!"

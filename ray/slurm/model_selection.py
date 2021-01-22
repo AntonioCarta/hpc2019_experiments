@@ -5,6 +5,7 @@ import os
 import ray
 import time
 import sys
+import socket
 
 
 class RayModelSelection(Experiment):
@@ -21,7 +22,7 @@ class RayModelSelection(Experiment):
 
         if os.environ.get('ip_head') is not None:
             assert os.environ.get('redis_password') is not None
-            ray.init(address=os.environ.get('ip_head'), redis_password=os.environ.get('redis_password'))
+            ray.init(address=os.environ.get('ip_head'))
             self.experiment_log.info("Connected to Ray cluster.")
             self.experiment_log.info(f"Available nodes: {ray.nodes()}")
         else:
@@ -70,6 +71,7 @@ class RayModelSelection(Experiment):
     def run_single_model(self, train_log_dir, params):
         @ray.remote(num_cpus=self.num_cpus)
         def aux_foo():
+            print(socket.gethostname())
             return self.train_foo(log_dir=train_log_dir, params=params)
         return aux_foo.remote()
 
@@ -87,10 +89,11 @@ if __name__ == '__main__':
 
     def train_foo(log_dir, params):
         print(f"Running config {params['id']}")
-        time.sleep(5)
+        time.sleep(50)
         print(f"Finished config {params['id']}")
         return {'tr_loss': 0, 'tr_acc': 0, 'vl_loss': 0, 'vl_acc': 0}
 
     param_list = [{'model_type': 'a', 'id': i} for i in range(30)]
     rms = RayModelSelection('./logs/debug/', param_list, train_foo, 7)
     rms.run()
+
